@@ -1,0 +1,4 @@
+# Store text as LF in the repo; check out with the platform's line endings.
+* text=auto
+# Windows PowerShell scripts keep CRLF everywhere.
+*.ps1 text eol=crlf

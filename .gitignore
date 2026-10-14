@@ -1,0 +1,6 @@
+# Measurement data stays local
+*.csv
+
+__pycache__/
+*.pyc
+.venv/
