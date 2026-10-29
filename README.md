@@ -9,7 +9,7 @@ on Windows, into a MySQL table and/or a CSV file, using Vernier's
 | --- | --- |
 | `humidity_logger.py` | Connects to the sensor (USB or Bluetooth), discards a warm-up period, and saves one averaged row per interval to MySQL and/or CSV. |
 | `setup_routine_logging.ps1` | Registers a Windows Task Scheduler task that runs the logger in the background every time you log in, and restarts it if it stops. |
-| `sql/setup.sql` | Creates the `vernier_godirect` database and `gdx_co2_readings` table. |
+| `sql/create_table.sql` | Creates the `gdx_co2_readings` table in an existing MySQL database. |
 | `db_config.example.ini` | Template for `db_config.ini`, which holds the MySQL connection settings. |
 
 ## Setup
@@ -34,7 +34,8 @@ on Windows, into a MySQL table and/or a CSV file, using Vernier's
 
 ## MySQL setup
 
-The logger writes to this table (`sql/setup.sql`):
+The logger writes to this table (`sql/create_table.sql`). The table can live in any
+existing database, for example on a shared lab server:
 
 | Column | Type | Contents |
 | --- | --- | --- |
@@ -50,31 +51,31 @@ The logger writes to this table (`sql/setup.sql`):
 
 `(device, recorded_at)` is unique, so a retried insert never creates a duplicate row.
 
-1. **Create the database and table.** From this folder, run the setup script as an admin
-   account. It asks for that account's password:
+1. **Create the table.** In MySQL Workbench, open the server's connection. Under
+   *SCHEMAS*, double-click the database the table should go in, so its name turns bold.
+   Then go to **File → Open SQL Script…**, choose `sql/create_table.sql`, and click
+   **Execute** (lightning bolt). Refresh *SCHEMAS* to see `gdx_co2_readings`.
 
-   ```powershell
-   mysql -u root -p -e "source sql/setup.sql"
-   ```
+   Your account needs the `CREATE` privilege on that database. To use a brand-new database
+   instead, run `CREATE DATABASE vernier_godirect;` first (needs admin rights).
 
-   If `mysql` isn't recognized, use its full path, usually
-   `"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"`. You can also open
-   `sql/setup.sql` in MySQL Workbench and run it there.
-
-2. **Create a MySQL account for the logger.** It only needs to read and insert rows.
-   Log in as root (`mysql -u root -p`), then run the following with a new password of
-   your own in place of `choose-a-password`:
+2. **Pick the account the logger connects as.** A dedicated account that can only read
+   and insert rows is safest. If you have admin rights on the server (or ask whoever
+   does), run the following, with your database name in place of `your_database` and a
+   new password in place of `choose-a-password`:
 
    ```sql
-   CREATE USER 'gdx_logger'@'localhost' IDENTIFIED BY 'choose-a-password';
-   GRANT SELECT, INSERT ON vernier_godirect.gdx_co2_readings TO 'gdx_logger'@'localhost';
+   CREATE USER 'gdx_logger'@'%' IDENTIFIED BY 'choose-a-password';
+   GRANT SELECT, INSERT ON your_database.gdx_co2_readings TO 'gdx_logger'@'%';
    ```
 
-   If MySQL runs on a different computer from the sensor, use `'gdx_logger'@'%'` (or the
-   logging PC's address) in both lines instead of `'localhost'`.
+   `'%'` allows connections from any computer. If MySQL is on the logging PC itself, use
+   `'localhost'` instead. Otherwise, use your own account for that server, as long as it
+   can `SELECT` and `INSERT` on the table.
 
 3. **Give the logger the connection settings.** Copy the template, then open
-   `db_config.ini` and set `password` (and `host` if MySQL is on another computer):
+   `db_config.ini` and set `host` (the server name or IP, as in your Workbench connection),
+   `user`, `password` and `database`:
 
    ```powershell
    Copy-Item db_config.example.ini db_config.ini
@@ -89,7 +90,7 @@ The logger writes to this table (`sql/setup.sql`):
    py humidity_logger.py --test-db
    ```
 
-   This should print `MySQL OK: gdx_logger@localhost:3306/vernier_godirect.gdx_co2_readings has 0 row(s).`
+   This should print `MySQL OK: <user>@<host>:3306/<database>.gdx_co2_readings has 0 row(s).`
 
 ## One-off logging
 
@@ -140,7 +141,7 @@ To look at the latest rows in MySQL:
 
 ```sql
 SELECT recorded_at, humidity_pct, co2_ppm, temperature_c
-FROM vernier_godirect.gdx_co2_readings
+FROM gdx_co2_readings  -- with your database as the default schema
 ORDER BY recorded_at DESC LIMIT 10;
 ```
 

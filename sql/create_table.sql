@@ -1,17 +1,14 @@
--- Creates the database and table that humidity_logger.py writes to.
--- Safe to run more than once. Run as an admin account (e.g. root):
+-- Creates the table that humidity_logger.py writes to, in an existing database.
+-- Safe to run more than once.
 --
---   mysql -u root -p -e "source sql/setup.sql"
+-- MySQL Workbench: open your server's connection, double-click the target
+-- database under SCHEMAS so it is shown in bold (the default schema), then
+-- open this file and execute it.
 --
--- (PowerShell has no "<" redirection, hence "source".)
+-- Command line:
+--   mysql -h <server> -u <user> -p <database> -e "source sql/create_table.sql"
 --
--- The logger's own MySQL account is created separately (see README), so that
--- no password is stored in this file.
-
-CREATE DATABASE IF NOT EXISTS vernier_godirect
-    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-USE vernier_godirect;
+-- Put the same database name and table name in db_config.ini.
 
 CREATE TABLE IF NOT EXISTS gdx_co2_readings (
     id            BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT,
@@ -27,4 +24,5 @@ CREATE TABLE IF NOT EXISTS gdx_co2_readings (
     -- Lets the logger safely retry an insert without creating duplicate rows.
     UNIQUE KEY uq_device_time (device, recorded_at),
     KEY idx_recorded_at (recorded_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Vernier GDX-CO2 readings from VernierGoDirect/humidity_logger.py';
