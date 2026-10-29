@@ -1,5 +1,9 @@
-# Measurement data stays local
+# Measurement data and logs stay local
 *.csv
+*.log
+
+# Holds the MySQL password
+db_config.ini
 
 __pycache__/
 *.pyc
